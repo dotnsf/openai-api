@@ -2,7 +2,6 @@
 var express = require( 'express' ),
     bodyParser = require( 'body-parser' ),
     axios = require( 'axios' ),
-    request = require( 'request' ),
     app = express();
 
 app.use( express.static( __dirname + '/public' ) );
@@ -10,9 +9,10 @@ app.use( bodyParser.urlencoded( { extended: true } ) );
 app.use( bodyParser.json() );
 app.use( express.Router() );
 
+var IGNORE_PHRASE = 10;  //. 結果の最初のフレーズがこの長さ以下だったら無視する
+
 var settings_cors = 'CORS' in process.env ? process.env.CORS : '';  //. "http://localhost:8080,https://xxx.herokuapp.com"
 app.all( '/*', function( req, res, next ){
-  //console.log( req.headers );
   if( settings_cors ){
     var origin = req.headers.origin;
     if( origin ){
@@ -58,7 +58,7 @@ app.post( '/api/query', function( req, res ){
   };
   var option = {
     url: 'https://api.openai.com/v1/completions',
-    method: 'GET',
+    method: 'POST',
     json: data,
     headers: db_headers
   };
@@ -74,7 +74,7 @@ app.post( '/api/query', function( req, res ){
     }
   });
   */
-  axios.get( 'https://api.openai.com/v1/completions', {
+  axios.post( 'https://api.openai.com/v1/completions', {
     prompt: text,
     model: 'text-davinci-003',
     max_tokens: 4000
@@ -85,8 +85,30 @@ app.post( '/api/query', function( req, res ){
     }
   }).then( function( result ){
     console.log( {result} );
-    res.write( JSON.stringify( { status: true, result: result }, null, 2 ) );
-    res.end();
+    res.status( result.status );
+    if( result.status == 200 ){
+      if( result.data && result.data.choices && result.data.choices.length > 0 ){
+        //. result.data.choices[0] に結果テキスト
+        var answer = result.data.choices[0].text;
+
+        //. 最初の "\n\n" 以降が正しい回答？
+        var tmp = answer.split( "\n\n" );
+        if( tmp.length > 1 && tmp[0].length < IGNORE_PHRASE ){
+          tmp.shift();
+          answer = tmp.join( "\n\n" );
+        }
+
+        res.write( JSON.stringify( { status: true, result: answer }, null, 2 ) );
+        res.end();
+      }else{
+        //. どういうケースでここに来る可能性があるか、不明
+        res.write( JSON.stringify( { status: false, result: result }, null, 2 ) );
+        res.end();
+      }
+    }else{
+      res.write( JSON.stringify( { status: false, result: result }, null, 2 ) );
+      res.end();
+    }
   }).catch( function( err ){
     res.status( 400 );
     res.write( JSON.stringify( { status: false, error: err }, null, 2 ) );
