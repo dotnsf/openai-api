@@ -1,7 +1,7 @@
 swagger: '2.0'
 info:
   description: OpenAI API ドキュメント
-  version: 0.0.1
+  version: 0.1.0
   title: OpenAI API REST APIs
 #host: urapi.herokuapp.com
 basePath: /api
@@ -12,28 +12,112 @@ schemes:
   - http
   - https
 paths:
-  /query:
+  /engines:
+    get:
+      tags:
+        - openapi
+      summary: Engines API
+      description: Retrieve Engines
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
+  /models:
+    get:
+      tags:
+        - openapi
+      summary: Models API
+      description: Retrieve Models
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
+  /model/{id}:
+    get:
+      tags:
+        - openapi
+      summary: Retrieve Model API
+      description: Retrieve Model
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          type: string
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
+  /complete:
     post:
       tags:
         - openapi
-      summary: Query
-      description: Query Open API
+      summary: Complete Query
+      description: Complete Query Open API
       produces:
         - application/json
       parameters:
         - name: body
           in: body
           schema:
-            $ref: '#/definitions/QueryRequest'
+            $ref: '#/definitions/CompleteRequest'
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
+  /image:
+    post:
+      tags:
+        - openapi
+      summary: Create Image
+      description: Create Image Open API
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          schema:
+            $ref: '#/definitions/ImageRequest'
       responses:
         '200':
           description: 成功
         '400':
           description: エラー
 definitions:
-  QueryRequest:
+  CompleteRequest:
     type: object
     properties:
-      text:
+      prompt:
         type: string
-        description: 日本語テキスト
+        description: （日本語）テキスト
+        required: true
+      model:
+        type: string
+        description: モデルID (Default="text-davinci-003")
+      max_tokens:
+        type: int
+        description: トークン数 (Default=4000)
+  ImageRequest:
+    type: object
+    properties:
+      prompt:
+        type: string
+        description: （日本語）テキスト
+        required: true
+      size:
+        type: string
+        description: サイズ ("256x256"(default), "512x512", or "1024x1024")
+      format:
+        type: string
+        description: ("b64_json", or "url"(default))
+      n:
+        type: number
+        description: 生成数 (Default=1)

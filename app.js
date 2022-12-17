@@ -1,8 +1,10 @@
 //. app.js
 var express = require( 'express' ),
     bodyParser = require( 'body-parser' ),
-    axios = require( 'axios' ),
+    { Configuration, OpenAIApi } = require( 'openai' ),
     app = express();
+
+require( 'dotenv' ).config();
 
 app.use( express.static( __dirname + '/public' ) );
 app.use( bodyParser.urlencoded( { extended: true } ) );
@@ -41,79 +43,92 @@ app.get( '/ping', function( req, res ){
 });
 
 var settings_apikey = 'API_KEY' in process.env ? process.env.API_KEY : '';
+var settings_organization = 'ORGANIZATION' in process.env ? process.env.ORGANIZATION : '';
+var configuration = new Configuration({ apiKey: settings_apikey, organization: settings_organization });
+var openai = new OpenAIApi( configuration );
+//console.log( openai );
 
-app.post( '/api/query', function( req, res ){
+app.get( '/api/engines', async function( req, res ){
   res.contentType( 'application/json; charset=utf-8' );
-  var text = req.body.text;
 
-  /*
-  var db_headers = { 
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer ' + settings_apikey 
-  };
-  var data = {
-    prompt: text,
-    model: 'text-davinci-003',
-    max_tokens: 4000
-  };
+  var result = await openai.listEngines();
+  res.write( JSON.stringify( { status: true, result: result.data.data }, null, 2 ) );
+  res.end();
+});
+
+app.get( '/api/models', async function( req, res ){
+  res.contentType( 'application/json; charset=utf-8' );
+
+  var result = await openai.listModels();
+  res.write( JSON.stringify( { status: true, result: result.data.data }, null, 2 ) );
+  res.end();
+});
+
+app.get( '/api/model/:id', async function( req, res ){
+  res.contentType( 'application/json; charset=utf-8' );
+
+  var id = req.params.id;
+  var result = await openai.retrieveModel( id );
+  res.write( JSON.stringify( { status: true, result: result.data }, null, 2 ) );
+  res.end();
+});
+
+app.post( '/api/complete', async function( req, res ){
+  res.contentType( 'application/json; charset=utf-8' );
+  var model = ( req.body.model ? req.body.model : 'text-davinci-003' );
+  var max_tokens = ( req.body.max_tokens ? parseInt( req.body.max_tokens ) : 4000 );
+  var prompt = req.body.prompt;
+
   var option = {
-    url: 'https://api.openai.com/v1/completions',
-    method: 'POST',
-    json: data,
-    headers: db_headers
+    model: model,
+    prompt: prompt,
+    max_tokens: max_tokens
   };
-  request( option, ( err, res0, body ) => {
-    if( err ){
-      res.status( 400 );
-      res.write( JSON.stringify( { status: false, error: err }, null, 2 ) );
-      res.end();
-    }else{
-      console.log( {body} );
-      res.write( JSON.stringify( { status: true, result: body }, null, 2 ) );
-      res.end();
-    }
-  });
-  */
-  axios.post( 'https://api.openai.com/v1/completions', {
-    prompt: text,
-    model: 'text-davinci-003',
-    max_tokens: 4000
-  }, {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + settings_apikey 
-    }
-  }).then( function( result ){
-    console.log( {result} );
-    res.status( result.status );
-    if( result.status == 200 ){
-      if( result.data && result.data.choices && result.data.choices.length > 0 ){
-        //. result.data.choices[0] に結果テキスト
-        var answer = result.data.choices[0].text;
+  if( req.body.temperature ){
+    option.temperature = parseFloat( req.body.temperature );
+  }
+  if( req.body.top_p ){
+    option.top_p = parseFloat( req.body.top_p );
+  }
+  if( req.body.n ){
+    option.n = parseInt( req.body.n );
+  }
 
-        //. 最初の "\n\n" 以降が正しい回答？
-        var tmp = answer.split( "\n\n" );
-        if( tmp.length > 1 && tmp[0].length < IGNORE_PHRASE ){
-          tmp.shift();
-          answer = tmp.join( "\n\n" );
-        }
+  var result = await openai.createCompletion( option );
+  var answer = result.data.choices[0].text;
 
-        res.write( JSON.stringify( { status: true, result: answer }, null, 2 ) );
-        res.end();
-      }else{
-        //. どういうケースでここに来る可能性があるか、不明
-        res.write( JSON.stringify( { status: false, result: result }, null, 2 ) );
-        res.end();
-      }
-    }else{
-      res.write( JSON.stringify( { status: false, result: result }, null, 2 ) );
-      res.end();
-    }
-  }).catch( function( err ){
-    res.status( 400 );
-    res.write( JSON.stringify( { status: false, error: err }, null, 2 ) );
-    res.end();
-  });
+  //. 最初の "\n\n" 以降が正しい回答？
+  var tmp = answer.split( "\n\n" );
+  if( tmp.length > 1 && tmp[0].length < IGNORE_PHRASE ){
+    tmp.shift();
+    answer = tmp.join( "\n\n" );
+  }
+
+  res.write( JSON.stringify( { status: true, result: answer }, null, 2 ) );
+  res.end();
+});
+
+app.post( '/api/image', async function( req, res ){
+  res.contentType( 'application/json; charset=utf-8' );
+  var n = ( req.body.n ? parseInt( req.body.n ) : 1 );
+  var size = ( req.body.size ? req.body.size : '256x256' );
+  var format = ( req.body.format ? req.body.format : 'url' /* 'url' or 'b64_json' */ );  //. response_format
+  var prompt = req.body.prompt;
+
+  var option = {
+    prompt: prompt,
+    n: n,
+    size: size,
+    response_format: format
+  };
+
+  var result = await openai.createImage( option );
+  //console.log( result.data );
+  //result.data.data[i].b64_json = "iVBORw0...";
+  //. "data:image/png;base64," を付けると <img src="xx" に使える
+
+  res.write( JSON.stringify( { status: true, result: result['data']['data'] }, null, 2 ) );
+  res.end();
 });
 
 var port = process.env.PORT || 8080;

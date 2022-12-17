@@ -4,6 +4,12 @@
 ## Overview
 
 
+## References
+
+https://beta.openai.com/docs/guides/completion
+
+https://beta.openai.com/docs/api-reference?lang=node.js
+
 
 ## Licensing
 
