@@ -23,10 +23,14 @@ app.all( '/*', function( req, res, next ){
       //. cors = [ "*" ] への対応が必要
       if( cors.indexOf( '*' ) > -1 ){
         res.setHeader( 'Access-Control-Allow-Origin', '*' );
+        res.setHeader( 'Access-Control-Allow-Methods', '*' );
+        res.setHeader( 'Access-Control-Allow-Headers', '*' );
         res.setHeader( 'Vary', 'Origin' );
       }else{
         if( cors.indexOf( origin ) > -1 ){
           res.setHeader( 'Access-Control-Allow-Origin', origin );
+          res.setHeader( 'Access-Control-Allow-Methods', '*' );
+          res.setHeader( 'Access-Control-Allow-Headers', '*' );
           res.setHeader( 'Vary', 'Origin' );
         }
       }
