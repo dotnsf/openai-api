@@ -73,6 +73,8 @@ paths:
           description: 成功
         '400':
           description: エラー
+        '429':
+          description: Too many requests
   /image:
     post:
       tags:
@@ -91,6 +93,8 @@ paths:
           description: 成功
         '400':
           description: エラー
+        '429':
+          description: Too many requests
 definitions:
   CompleteRequest:
     type: object

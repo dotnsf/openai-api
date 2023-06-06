@@ -102,7 +102,8 @@ app.post( '/api/complete', async function( req, res ){
   }
 
   try{
-    var result = await openai.createCompletion( option );
+    //var result = await openai.createCompletion( option );
+    var result = await callWithProgress( progressingOperation, option, 5 ); //. #1
     var answer = result.data.choices[0].text;
 
     //. 最初の "\n\n" 以降が正しい回答？
@@ -115,14 +116,52 @@ app.post( '/api/complete', async function( req, res ){
     res.write( JSON.stringify( { status: true, result: answer }, null, 2 ) );
     res.end();
   }catch( err ){
-    console.log( err );
-    var status_code = ( err.response && err.response.status ? err.response.status : 400 );
-    var status_text = ( err.response && err.response.statusText ? err.response.statusText : 'unknown error' );
+    //console.log( {err} );
+    //console.log( err.result.response );
+    var status_code = ( err.response && err.response.status ? err.response.status : ( err.result && err.result.response && err.result.response.status ? err.result.response.status : 400 ) ); //. #1
+    var status_text = ( err.response && err.response.statusText ? err.response.statusText : ( err.result && err.result.response && err.result.response.statusText ? err.result.response.statusText : 'unknown error' ) );
+    if( err.result && err.result.response && err.result.response.data && err.result.response.data.error && err.result.response.data.error.message ){
+      status_text += '. ' + err.result.response.data.error.message;
+    }
     res.status( status_code )
     res.write( JSON.stringify( { status: false, error: status_text }, null, 2 ) );
     res.end();
   }
 });
+
+//. #1
+const wait = ( ms ) => new Promise( ( res ) => setTimeout( res, ms ) );
+const progressingOperation = async ( option ) => {
+	await wait( 10 );
+  try{
+    var result = await openai.createCompletion( option );
+  	return {
+      status: true,
+		  result: result
+  	};
+  }catch( e ){
+  	return {
+      status: false,
+		  result: e
+  	};
+  }
+}
+const callWithProgress = async ( fn, option, maxdepth = 5, depth = 0 ) => {
+	const result = await fn( option );
+
+	// check completion
+	if( result.status ){
+		// finished
+		return result.result;
+	}else{
+		if( depth > maxdepth ){
+			throw result;
+		}
+		await wait( depth * 500 );
+	
+		return callWithProgress( fn, option, maxdepth, depth + 1 );
+	}
+}
 
 app.post( '/api/image', async function( req, res ){
   res.contentType( 'application/json; charset=utf-8' );
