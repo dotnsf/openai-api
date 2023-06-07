@@ -146,7 +146,7 @@ const progressingOperation = async ( option ) => {
   	};
   }
 }
-const callWithProgress = async ( fn, option, maxdepth = 5, depth = 0 ) => {
+const callWithProgress = async ( fn, option, maxdepth = 7, depth = 0 ) => {
 	const result = await fn( option );
 
 	// check completion
@@ -157,7 +157,7 @@ const callWithProgress = async ( fn, option, maxdepth = 5, depth = 0 ) => {
 		if( depth > maxdepth ){
 			throw result;
 		}
-		await wait( depth * 500 );
+		await wait( Math.pow( 2, depth ) * 10 );
 	
 		return callWithProgress( fn, option, maxdepth, depth + 1 );
 	}
