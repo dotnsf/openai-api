@@ -79,7 +79,7 @@ app.get( '/api/model/:id', async function( req, res ){
 
 app.post( '/api/complete', async function( req, res ){
   res.contentType( 'application/json; charset=utf-8' );
-  var model = ( req.body.model ? req.body.model : 'gpt-3.5-turbo'/*'text-davinci-003'*/ );
+  var model = ( req.body.model ? req.body.model : /*'gpt-3.5-turbo'*/'text-davinci-003' );
   var max_tokens = ( req.body.max_tokens ? parseInt( req.body.max_tokens ) : 4000 );
   var prompt = req.body.prompt;
 
