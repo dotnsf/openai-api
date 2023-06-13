@@ -95,6 +95,46 @@ paths:
           description: エラー
         '429':
           description: Too many requests
+  /chat:
+    post:
+      tags:
+        - openapi
+      summary: Chat
+      description: Chat Open API
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          schema:
+            $ref: '#/definitions/ChatRequest'
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
+        '429':
+          description: Too many requests
+  /edit:
+    post:
+      tags:
+        - openapi
+      summary: Edit
+      description: Edit Open API
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          schema:
+            $ref: '#/definitions/EditRequest'
+      responses:
+        '200':
+          description: 成功
+        '400':
+          description: エラー
+        '429':
+          description: Too many requests
 definitions:
   CompleteRequest:
     type: object
@@ -125,3 +165,36 @@ definitions:
       n:
         type: number
         description: 生成数 (Default=1)
+  ChatRequest:
+    type: object
+    properties:
+      role:
+        type: string
+        description: ロール（'system', 'user', 'assistant'）
+      content:
+        type: string
+        description: （日本語）テキスト
+        required: true
+      model:
+        type: string
+        description: モデルID (Default="gpt-3.5-turbo")
+      max_tokens:
+        type: int
+        description: トークン数 (Default=4000)
+  EditRequest:
+    type: object
+    properties:
+      input:
+        type: string
+        description: 元テキスト
+        required: true
+      instruction:
+        type: string
+        description: 指示テキスト
+        required: true
+      model:
+        type: string
+        description: モデルID (Default="text-davinci-edit-001")
+      max_tokens:
+        type: int
+        description: トークン数 (Default=4000)

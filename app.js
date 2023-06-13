@@ -79,7 +79,7 @@ app.get( '/api/model/:id', async function( req, res ){
 
 app.post( '/api/complete', async function( req, res ){
   res.contentType( 'application/json; charset=utf-8' );
-  var model = ( req.body.model ? req.body.model : /*'gpt-3.5-turbo'*/'text-davinci-003' );
+  var model = ( req.body.model ? req.body.model : 'text-davinci-003' );
   var max_tokens = ( req.body.max_tokens ? parseInt( req.body.max_tokens ) : 4000 );
   var prompt = req.body.prompt;
 
@@ -103,7 +103,7 @@ app.post( '/api/complete', async function( req, res ){
 
   try{
     //var result = await openai.createCompletion( option );
-    var result = await callWithProgress( progressingOperation, option, 5 ); //. #1
+    var result = await callWithProgress( progressingCompletion, option, 5 ); //. #1
     var answer = result.data.choices[0].text;
 
     //. 最初の "\n\n" 以降が正しい回答？
@@ -131,7 +131,8 @@ app.post( '/api/complete', async function( req, res ){
 
 //. #1
 const wait = ( ms ) => new Promise( ( res ) => setTimeout( res, ms ) );
-const progressingOperation = async ( option ) => {
+
+const progressingCompletion = async ( option ) => {
 	await wait( 10 );
   try{
     var result = await openai.createCompletion( option );
@@ -146,6 +147,55 @@ const progressingOperation = async ( option ) => {
   	};
   }
 }
+
+const progressingImage = async ( option ) => {
+	await wait( 10 );
+  try{
+    var result = await openai.createImage( option );
+  	return {
+      status: true,
+		  result: result
+  	};
+  }catch( e ){
+  	return {
+      status: false,
+		  result: e
+  	};
+  }
+}
+
+const progressingChatCompletion = async ( option ) => {
+	await wait( 10 );
+  try{
+    var result = await openai.createChatCompletion( option );
+  	return {
+      status: true,
+		  result: result
+  	};
+  }catch( e ){
+  	return {
+      status: false,
+		  result: e
+  	};
+  }
+}
+
+const progressingEdit = async ( option ) => {
+	await wait( 10 );
+  try{
+    var result = await openai.createEdit( option );
+  	return {
+      status: true,
+		  result: result
+  	};
+  }catch( e ){
+  	return {
+      status: false,
+		  result: e
+  	};
+  }
+}
+
 const callWithProgress = async ( fn, option, maxdepth = 7, depth = 0 ) => {
 	const result = await fn( option );
 
@@ -177,14 +227,119 @@ app.post( '/api/image', async function( req, res ){
     response_format: format
   };
 
-  var result = await openai.createImage( option );
-  //console.log( result.data );
-  //result.data.data[i].b64_json = "iVBORw0...";
-  //. "data:image/png;base64," を付けると <img src="xx" に使える
+  //var result = await openai.createImage( option );
+  var result = await callWithProgress( progressingImage, option, 5 ); //. #1
 
   res.write( JSON.stringify( { status: true, result: result['data']['data'] }, null, 2 ) );
   res.end();
 });
+
+//. #2
+app.post( '/api/chat', async function( req, res ){
+  res.contentType( 'application/json; charset=utf-8' );
+  var role = ( req.body.role ? req.body.role : 'user' );
+  var model = ( req.body.model ? req.body.model : 'gpt-3.5-turbo' );
+  var max_tokens = ( req.body.max_tokens ? parseInt( req.body.max_tokens ) : 4000 );
+  var content = ( req.body.content ? req.body.content : '' );
+
+  var option = {
+    model: model,
+    messages: [
+      { role: role, content: content }
+    ],
+    max_tokens: max_tokens
+  };
+  if( req.body.temperature ){
+    option.temperature = parseFloat( req.body.temperature );
+  }
+  if( req.body.top_p ){
+    option.top_p = parseFloat( req.body.top_p );
+  }
+  if( req.body.n ){
+    option.n = parseInt( req.body.n );
+  }
+
+  try{
+    //var result = await openai.createChatCompletion( option );
+    var result = await callWithProgress( progressingChatCompletion, option, 5 ); //. #1
+    //console.log( {result} );
+    var answer = result.data.choices[0].message.content;
+
+    /*
+    //. 最初の "\n\n" 以降が正しい回答？
+    var tmp = answer.split( "\n\n" );
+    if( tmp.length > 1 && tmp[0].length < IGNORE_PHRASE ){
+      tmp.shift();
+      answer = tmp.join( "\n\n" );
+    }
+    */
+
+    res.write( JSON.stringify( { status: true, result: answer }, null, 2 ) );
+    res.end();
+  }catch( err ){
+    console.log( {err} );
+    //console.log( err.result.response );
+    var status_code = ( err.response && err.response.status ? err.response.status : ( err.result && err.result.response && err.result.response.status ? err.result.response.status : 400 ) ); //. #1
+    var status_text = ( err.response && err.response.statusText ? err.response.statusText : ( err.result && err.result.response && err.result.response.statusText ? err.result.response.statusText : 'unknown error' ) );
+    if( err.result && err.result.response && err.result.response.data && err.result.response.data.error && err.result.response.data.error.message ){
+      status_text += '. ' + err.result.response.data.error.message;
+    }
+    res.status( status_code )
+    res.write( JSON.stringify( { status: false, error: status_text }, null, 2 ) );
+    res.end();
+  }
+});
+
+app.post( '/api/edit', async function( req, res ){
+  res.contentType( 'application/json; charset=utf-8' );
+  var model = ( req.body.model ? req.body.model : 'text-davinci-edit-001' );
+  var input = ( req.body.input ? req.body.input : '' );
+  var instruction = ( req.body.instruction ? req.body.instruction : '' );
+
+  var option = {
+    model: model,
+    input: input,
+    instruction: instruction
+  };
+  if( req.body.temperature ){
+    option.temperature = parseFloat( req.body.temperature );
+  }
+  if( req.body.top_p ){
+    option.top_p = parseFloat( req.body.top_p );
+  }
+  if( req.body.n ){
+    option.n = parseInt( req.body.n );
+  }
+
+  try{
+    //var result = await openai.createEdit( option );
+    var result = await callWithProgress( progressingEdit, option, 5 ); //. #1
+    //console.log( result.data );
+    var answer = result.data.choices[0].text;
+
+    //. 最初の "\n\n" 以降が正しい回答？
+    var tmp = answer.split( "\n\n" );
+    if( tmp.length > 1 && tmp[0].length < IGNORE_PHRASE ){
+      tmp.shift();
+      answer = tmp.join( "\n\n" );
+    }
+
+    res.write( JSON.stringify( { status: true, result: answer }, null, 2 ) );
+    res.end();
+  }catch( err ){
+    //console.log( {err} );
+    //console.log( err.result.response );
+    var status_code = ( err.response && err.response.status ? err.response.status : ( err.result && err.result.response && err.result.response.status ? err.result.response.status : 400 ) ); //. #1
+    var status_text = ( err.response && err.response.statusText ? err.response.statusText : ( err.result && err.result.response && err.result.response.statusText ? err.result.response.statusText : 'unknown error' ) );
+    if( err.result && err.result.response && err.result.response.data && err.result.response.data.error && err.result.response.data.error.message ){
+      status_text += '. ' + err.result.response.data.error.message;
+    }
+    res.status( status_code )
+    res.write( JSON.stringify( { status: false, error: status_text }, null, 2 ) );
+    res.end();
+  }
+});
+
 
 var port = process.env.PORT || 8080;
 app.listen( port );
