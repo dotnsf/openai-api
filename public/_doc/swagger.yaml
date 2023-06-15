@@ -155,7 +155,7 @@ paths:
         - name: content
           in: formData
           type: string
-          description: ロール
+          description: 本文
           required: true
         - name: role
           in: formData
