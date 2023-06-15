@@ -63,11 +63,36 @@ paths:
       description: Complete Query Open API
       produces:
         - application/json
+      consumes:
+        - multipart/form-data
       parameters:
-        - name: body
-          in: body
-          schema:
-            $ref: '#/definitions/CompleteRequest'
+        - name: prompt
+          in: formData
+          type: string
+          description: （日本語）テキスト
+          required: true
+        - name: model
+          in: formData
+          type: string
+          enum: [ "text-davinci-003", "text-davinci-002", "text-curie-001", "text-babbage-001", "text-ada-001" ]
+          description: モデルID
+          required: true
+        - name: max_tokens
+          in: formData
+          type: integer
+          description: トークン数 (Default=4000)
+        - name: temperature
+          in: formData
+          type: number
+          description: サンプリング温度感（0.0-2.0）
+        - name: top_p
+          in: formData
+          type: number
+          description: 指定割合上位のトークンに絞る
+        - name: n
+          in: formData
+          type: integer
+          description: 生成数 (Default=1)
       responses:
         '200':
           description: 成功
@@ -83,11 +108,32 @@ paths:
       description: Create Image Open API
       produces:
         - application/json
+      consumes:
+        - multipart/form-data
       parameters:
-        - name: body
-          in: body
-          schema:
-            $ref: '#/definitions/ImageRequest'
+        - name: prompt
+          in: formData
+          type: string
+          description: （日本語）テキスト
+          required: true
+        - name: model
+          in: formData
+          type: string
+          enum: [ "text-davinci-003", "text-davinci-002", "text-curie-001", "text-babbage-001", "text-ada-001" ]
+          description: モデルID
+          required: true
+        - name: size
+          in: formData
+          type: string
+          enum: [ "256x256", "512x512", "1024x1024" ]
+          description: サイズ
+          required: true
+        - name: format
+          in: formData
+          type: string
+          enum: [ "url", "b64_json" ]
+          description: フォーマット 
+          required: true
       responses:
         '200':
           description: 成功
@@ -103,11 +149,30 @@ paths:
       description: Chat Open API
       produces:
         - application/json
+      consumes:
+        - multipart/form-data
       parameters:
-        - name: body
-          in: body
-          schema:
-            $ref: '#/definitions/ChatRequest'
+        - name: content
+          in: formData
+          type: string
+          description: ロール
+          required: true
+        - name: role
+          in: formData
+          type: string
+          enum: [ "user", "assistant", "system" ]
+          description: ロール
+          required: true
+        - name: model
+          in: formData
+          type: string
+          enum: [ "gpt-3.5-turbo", "gpt-4" ]
+          description: モデルID
+          required: true
+        - name: max_tokens
+          in: formData
+          type: integer
+          description: 最大トークン数
       responses:
         '200':
           description: 成功
@@ -123,11 +188,29 @@ paths:
       description: Edit Open API
       produces:
         - application/json
+      consumes:
+        - multipart/form-data
       parameters:
-        - name: body
-          in: body
-          schema:
-            $ref: '#/definitions/EditRequest'
+        - name: input
+          in: formData
+          type: string
+          description: （日本語）テキスト
+          required: true
+        - name: instruction
+          in: formData
+          type: string
+          description: 指示テキスト
+          required: true
+        - name: model
+          in: formData
+          type: string
+          enum: [ "text-davinci-edit-001", "code-davinci-edit-001" ]
+          description: モデルID
+          required: true
+        - name: max_tokens
+          in: formData
+          type: integer
+          description: 最大トークン数
       responses:
         '200':
           description: 成功
@@ -135,66 +218,3 @@ paths:
           description: エラー
         '429':
           description: Too many requests
-definitions:
-  CompleteRequest:
-    type: object
-    properties:
-      prompt:
-        type: string
-        description: （日本語）テキスト
-        required: true
-      model:
-        type: string
-        description: モデルID (Default="text-davinci-003")
-      max_tokens:
-        type: int
-        description: トークン数 (Default=4000)
-  ImageRequest:
-    type: object
-    properties:
-      prompt:
-        type: string
-        description: （日本語）テキスト
-        required: true
-      size:
-        type: string
-        description: サイズ ("256x256"(default), "512x512", or "1024x1024")
-      format:
-        type: string
-        description: ("b64_json", or "url"(default))
-      n:
-        type: number
-        description: 生成数 (Default=1)
-  ChatRequest:
-    type: object
-    properties:
-      role:
-        type: string
-        description: ロール（'system', 'user', 'assistant'）
-      content:
-        type: string
-        description: （日本語）テキスト
-        required: true
-      model:
-        type: string
-        description: モデルID (Default="gpt-3.5-turbo")
-      max_tokens:
-        type: int
-        description: トークン数 (Default=4000)
-  EditRequest:
-    type: object
-    properties:
-      input:
-        type: string
-        description: 元テキスト
-        required: true
-      instruction:
-        type: string
-        description: 指示テキスト
-        required: true
-      model:
-        type: string
-        description: モデルID (Default="text-davinci-edit-001")
-      max_tokens:
-        type: int
-        description: トークン数 (Default=4000)

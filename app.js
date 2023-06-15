@@ -1,6 +1,7 @@
 //. app.js
 var express = require( 'express' ),
     bodyParser = require( 'body-parser' ),
+    formData = require( 'express-form-data' ),
     { Configuration, OpenAIApi } = require( 'openai' ),
     app = express();
 
@@ -9,6 +10,8 @@ require( 'dotenv' ).config();
 app.use( express.static( __dirname + '/public' ) );
 app.use( bodyParser.urlencoded( { extended: true } ) );
 app.use( bodyParser.json() );
+app.use( formData.parse( { autoClean: true } ) );
+app.use( formData.format() );
 app.use( express.Router() );
 
 var IGNORE_PHRASE = 10;  //. 結果の最初のフレーズがこの長さ以下だったら無視する
@@ -86,9 +89,6 @@ app.post( '/api/complete', async function( req, res ){
   var option = {
     model: model,
     prompt: prompt,
-    //messages: [
-    //  { role: "user", content: prompt }
-    //],
     max_tokens: max_tokens
   };
   if( req.body.temperature ){
